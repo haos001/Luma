@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  macOS 13+ · SwiftUI + IOKit · 40 presets · No third-party packages · MIT
+  macOS 13+ · English / Русский · 40 presets · No third-party packages · MIT
 </p>
 
 <p align="center">
@@ -71,7 +71,13 @@ Luma refreshes the recommendation when you open or return to the app, or use Ref
 - **At home on macOS** — native navigation, automatic light/dark appearance, and Liquid Glass controls on macOS 26+.
 - **A tiny command-line companion** — `lumactl` for scripts and manual control.
 
-The current interface and preset names are in **Russian**. The project documentation is available in English and Russian. English UI localization is welcome.
+### Two languages, one familiar app
+
+> Bilingual UI is new in the 0.5.0 source version. The downloadable 0.4.0 release linked below still has the Russian-only interface; the 0.5.0 app release is being prepared.
+
+**English and Russian are built in.** Interface labels, all 40 preset names and descriptions, recommendations, tooltips, and device errors follow your chosen language. Open **… → Language / Язык** and choose **English**, **Русский**, or **Follow macOS**. Changes appear immediately, without restarting; Luma remembers your choice.
+
+On first launch, Luma follows the first supported language in your macOS language list, falling back to English. Your own favorite names stay exactly as you wrote them. Search understands built-in preset names in either language. Changing language does not send a command to the backlight.
 
 ## Installation
 
@@ -161,7 +167,7 @@ Read [privacy details](docs/PRIVACY.md) and [known limitations](docs/HARDWARE.md
 
 ## Development
 
-The 13 core test scenarios run without attached hardware and without XCTest. They cover color conversion, packet generation, recommendations, saved state, and transition logic—not physical light output or end-to-end UI behavior.
+The 17 core test scenarios run without attached hardware and without XCTest. They cover color conversion, packet generation, recommendations, saved state, transition logic, translation coverage, and language migration—not physical light output or end-to-end UI behavior.
 
 ```sh
 bash scripts/test.sh

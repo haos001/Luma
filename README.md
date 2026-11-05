@@ -11,7 +11,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/haos001/Luma/releases"><strong>Releases</strong></a> ·
+  <a href="https://github.com/haos001/Luma/releases/download/v0.4.0/Luma-0.4.0-macOS-arm64.zip"><strong>Download for Apple Silicon</strong></a> ·
+  <a href="https://github.com/haos001/Luma/releases">All releases</a> ·
   <a href="README.ru.md">Русский</a> ·
   <a href="#installation">Install</a> ·
   <a href="#a-color-for-this-moment">Recommended now</a> ·
@@ -76,9 +77,9 @@ The current interface and preset names are in **Russian**. The project documenta
 
 ### Download the app
 
-The first public build is being prepared for [GitHub Releases](https://github.com/haos001/Luma/releases). Once published, that page will contain the ready-to-run app and its SHA-256 checksum. You do not need Xcode, Swift, or a package manager to use a downloaded build.
+Get **Luma 0.4.0** from [GitHub Releases](https://github.com/haos001/Luma/releases/tag/v0.4.0), including the ready-to-run app and its SHA-256 checksum. You do not need Xcode, Swift, or a package manager to use a downloaded build.
 
-1. Download `Luma-0.4.0-macOS-arm64.zip` for an **Apple Silicon** Mac.
+1. [Download Luma for Apple Silicon](https://github.com/haos001/Luma/releases/download/v0.4.0/Luma-0.4.0-macOS-arm64.zip).
 2. Unzip it and drag **Luma.app** into **Applications**.
 3. Quit any other app controlling the backlight, then open Luma.
 

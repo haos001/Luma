@@ -4,7 +4,7 @@ English · [Русский](INSTALL.ru.md)
 
 ## Ready-to-run app
 
-The initial build is `Luma-0.4.0-macOS-arm64.zip` for **Apple Silicon**. It is prepared locally and awaiting publication in [haos001/Luma Releases](https://github.com/haos001/Luma/releases). An Intel build is not provided yet. The minimum deployment target is macOS 13; Liquid Glass appears only on macOS 26+.
+Download `Luma-0.4.0-macOS-arm64.zip` for **Apple Silicon** from [the Luma 0.4.0 release](https://github.com/haos001/Luma/releases/tag/v0.4.0). An Intel build is not provided yet. The minimum deployment target is macOS 13; Liquid Glass appears only on macOS 26+.
 
 1. Get the ZIP and matching `.zip.sha256` from the same Luma GitHub release.
 2. Optionally verify the download before opening it, using the command below.

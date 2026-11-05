@@ -4,7 +4,7 @@
 
 ## Готовое приложение
 
-Первоначальная сборка — `Luma-0.4.0-macOS-arm64.zip` для **Apple Silicon**. Она подготовлена локально и ожидает публикации в [Releases репозитория haos001/Luma](https://github.com/haos001/Luma/releases). Сборки для Intel пока нет. Минимальная целевая версия системы — macOS 13; Liquid Glass используется на macOS 26+.
+Скачайте `Luma-0.4.0-macOS-arm64.zip` для **Apple Silicon** со [страницы релиза Luma 0.4.0](https://github.com/haos001/Luma/releases/tag/v0.4.0). Сборки для Intel пока нет. Минимальная целевая версия системы — macOS 13; Liquid Glass используется на macOS 26+.
 
 1. Скачайте ZIP и соответствующий файл `.zip.sha256` из одного релиза Luma на GitHub.
 2. При желании проверьте контрольную сумму по инструкции ниже.

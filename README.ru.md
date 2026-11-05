@@ -4,7 +4,7 @@
 
 <p align="center"><strong>Цвет под ваш момент. Атмосфера под ваше настроение. Без работы в фоне после выхода.</strong></p>
 <p align="center">macOS 13+ · SwiftUI + IOKit · 40 пресетов · Без сторонних пакетов · MIT</p>
-<p align="center"><a href="https://github.com/haos001/Luma/releases"><strong>Релизы</strong></a> · <a href="README.md">English</a> · <a href="#установка">Установить</a> · <a href="#цвет-под-ваш-момент">Рекомендуется сейчас</a> · <a href="#как-пользоваться">Как пользоваться</a> · <a href="docs/HARDWARE.md">Совместимость</a> · <a href="CONTRIBUTING.md">Разработка</a></p>
+<p align="center"><a href="https://github.com/haos001/Luma/releases/download/v0.4.0/Luma-0.4.0-macOS-arm64.zip"><strong>Скачать для Apple Silicon</strong></a> · <a href="https://github.com/haos001/Luma/releases">Все релизы</a> · <a href="README.md">English</a> · <a href="#установка">Установка</a> · <a href="#цвет-под-ваш-момент">Рекомендуется сейчас</a> · <a href="docs/HARDWARE.md">Совместимость</a></p>
 
 ## Свет для вашего ритма
 
@@ -63,9 +63,9 @@ Luma — небольшое нативное приложение для кон�
 
 ### Готовое приложение
 
-Первая публичная сборка готовится к размещению в [GitHub Releases](https://github.com/haos001/Luma/releases). После публикации там будут приложение и его контрольная сумма. Для готовой сборки не нужны Xcode, Swift или пакетный менеджер.
+**Luma 0.4.0** доступна в [GitHub Releases](https://github.com/haos001/Luma/releases/tag/v0.4.0): готовое приложение и его контрольная сумма. Для этой сборки не нужны Xcode, Swift или пакетный менеджер.
 
-1. Скачайте `Luma-0.4.0-macOS-arm64.zip` для Mac с **Apple Silicon**.
+1. [Скачайте Luma для Apple Silicon](https://github.com/haos001/Luma/releases/download/v0.4.0/Luma-0.4.0-macOS-arm64.zip).
 2. Распакуйте архив и перенесите **Luma.app** в **«Программы»**.
 3. Закройте другое приложение, управляющее подсветкой, и откройте Luma.
 

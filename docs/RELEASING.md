@@ -34,8 +34,8 @@ For the first release, use [the v0.4.0 notes](releases/v0.4.0.md) as the release
 
 Before publishing the draft:
 
-- Replace the “release is being prepared” notices in both READMEs and installation guides with the real repository release URL.
-- Link the README's install entry to the actual release once it exists; never use a placeholder owner or a download URL for an asset that has not been uploaded.
+- Update the versioned release and download URLs in both READMEs and installation guides. Keep these edits local until the matching release assets are ready.
+- Verify the README's install entry against the actual release; never leave a placeholder owner or a download URL for a missing asset in the published README.
 - Check all attached filenames against the release notes and verify each checksum.
 - Download the published app archive again and verify its structure and checksum. Test installation on a separate machine or fresh user account when available.
 

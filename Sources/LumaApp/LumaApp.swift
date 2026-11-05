@@ -9,6 +9,7 @@ struct LumaApp: App {
     var body: some Scene {
         Window("Luma", id: "main") {
             ContentView(model: model)
+                .environment(\.locale, model.language.locale)
                 .preferredColorScheme(previewAppearance)
                 .onAppear { model.refresh(); NSApp.activate(ignoringOtherApps: true) }
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in model.refresh() }
@@ -18,10 +19,10 @@ struct LumaApp: App {
         .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(replacing: .newItem) { }
-            CommandMenu("Подсветка") {
-                Button("Плавно включить выбранный цвет") { model.apply() }.keyboardShortcut(.return, modifiers: .command)
-                Button("Выключить свет") { model.turnOff() }
-                Button("Обновить подключение и рекомендацию") { model.refresh() }.keyboardShortcut("r")
+            CommandMenu(model.text(.backlight)) {
+                Button(model.text(.apply)) { model.apply() }.keyboardShortcut(.return, modifiers: .command)
+                Button(model.text(.turnOff)) { model.turnOff() }
+                Button(model.text(.refresh)) { model.refresh() }.keyboardShortcut("r")
             }
         }
     }

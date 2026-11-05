@@ -11,7 +11,8 @@ Luma is one Swift package with Apple-framework dependencies only.
 | `LightCore/HIDTransport` | Device matching, exclusive short-lived handle, sequential writes |
 | `LightCore/LightTransition` | Eased frames and the fade-out / black / fade-in sequence |
 | `LightCore/RecommendationFlow` | Token-based guard against duplicate or stale animation completions |
-| `LightCore/PresetCatalog` | 40 built-in Russian-language presets |
+| `LightCore/PresetCatalog` | 40 built-in presets with stable identifiers |
+| `LightCore/Localization` | Typed English/Russian UI strings, preset presentation, language resolution |
 | `LightCore/RecommendationEngine` | Deterministic local date/season/time selection |
 | `LightCore/StateStore` | Validated local JSON and atomic saves |
 | `LumaApp/AppModel` | Main-thread UI state; serial queue for USB; cancellable live-preview debounce |
@@ -34,6 +35,8 @@ Live preview is opt-in, off at launch, and coalesces input with an 80 ms debounc
 There is no LaunchAgent, daemon, menu-bar helper, login item, network client, or update service. The last window closing terminates the app. A short in-progress hardware transition may defer termination; no off report is sent just because the process exits.
 
 The public package uses bundle ID `local.luma.desktop` and `~/Library/Application Support/Luma/state.json`. It does not automatically import earlier private-prototype preferences. `--preview` uses a separate temporary JSON file and skips USB operations.
+
+The saved language is `system`, `en`, or `ru`. Missing or unknown language values fall back to the system preference without discarding old colors or favorites. Language changes only affect presentation and the local settings file; they do not send USB reports. Built-in names are localized by stable preset ID, while user favorite names remain verbatim. Historical Russian enum raw values remain unchanged for data compatibility. In preview mode, `--language en` or `--language ru` overrides the initial language without touching production preferences.
 
 ## Testing
 

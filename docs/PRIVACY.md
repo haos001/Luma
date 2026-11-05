@@ -18,6 +18,7 @@ Luma enumerates matching USB HID interfaces and writes color reports when reques
 - Whether the last explicit command was off.
 - Last-applied timestamp.
 - Saved preset names and colors.
+- Interface language preference (`system`, `en`, or `ru`).
 
 The file is ordinary local JSON, not encrypted. It stays until you remove it. App removal alone does not remove preferences. The UI also follows normal macOS window-state behavior.
 

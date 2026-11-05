@@ -25,6 +25,6 @@ Explain the user-visible change, how it was tested, and which hardware was invol
 
 Keep external dependencies optional and justified. Do not add auto-start, analytics, broad USB probing, or continuous background work as incidental changes.
 
-The current UI is Russian-language. An English localization that preserves stable preset identifiers is a good candidate for a separate focused contribution.
+The app supports English and Russian. Add both translations for every `LumaText` key in `Sources/LightCore/Localization.swift`; keep preset IDs and persisted enum raw values stable. Do not translate user-authored favorite names. Check both languages with `open dist/Luma.app --args --preview --language en` (or `ru`) and test switching without restarting.
 
 Be respectful, discuss the work rather than the person, and avoid harassment or sharing private information. Contributions are submitted under the project's [MIT license](LICENSE), without a separate contributor agreement.

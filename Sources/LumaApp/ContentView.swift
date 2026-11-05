@@ -10,6 +10,12 @@ struct ContentView: View {
     @Environment(\.colorScheme) private var colorScheme
     private let columns = [GridItem(.adaptive(minimum: 180), spacing: 18)]
 
+    private var categoryTitle: String {
+        if model.category == "Все пресеты" { return model.text(.moodPalette) }
+        if model.category == "Мои цвета" { return model.text(.myColors) }
+        return PresetGroup(rawValue: model.category)?.localizedName(in: model.language) ?? model.category
+    }
+
     private var sidebarSelection: Binding<String?> {
         Binding(get: { model.category }, set: { selection in
             guard let selection else { return }
@@ -21,7 +27,7 @@ struct ContentView: View {
         let source = model.category == "Мои цвета" ? model.favorites : PresetCatalog.all
         return source.filter {
             (model.category == "Все пресеты" || model.category == "Мои цвета" || $0.group.rawValue == model.category)
-            && (model.search.isEmpty || ($0.name + " " + $0.subtitle).localizedCaseInsensitiveContains(model.search))
+            && (model.search.isEmpty || $0.matches(search: model.search))
         }
     }
 
@@ -43,27 +49,27 @@ struct ContentView: View {
         }
         .disabled(model.recommendationFlow.phase != .idle)
         .alert("Luma", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) {
-            Button("Понятно") { model.error = nil }
+            Button(model.text(.okay)) { model.error = nil }
         } message: { Text(model.error ?? "") }
         .sheet(isPresented: $model.showSave) { saveSheet }
     }
 
     private var sidebar: some View {
         List(selection: sidebarSelection) {
-            Section("Библиотека") {
-                Label("Все цвета", systemImage: "square.grid.2x2").badge(PresetCatalog.all.count).tag("Все пресеты")
-                Label("Мои цвета", systemImage: "heart").badge(model.favorites.count).tag("Мои цвета")
+            Section(model.text(.library)) {
+                Label(model.text(.allColors), systemImage: "square.grid.2x2").badge(PresetCatalog.all.count).tag("Все пресеты")
+                Label(model.text(.myColors), systemImage: "heart").badge(model.favorites.count).tag("Мои цвета")
             }
-            Section("Настроение") {
+            Section(model.text(.mood)) {
                 ForEach(PresetGroup.allCases, id: \.self) { group in
-                    Label(group.rawValue, systemImage: group.icon).tag(group.rawValue)
+                    Label(group.localizedName(in: model.language), systemImage: group.icon).tag(group.rawValue)
                 }
             }
         }
         .listStyle(.sidebar)
         .safeAreaInset(edge: .bottom, alignment: .leading) {
             Label {
-                Text("Свет останется,\nкогда вы закроете Luma.")
+                Text(model.text(.keepLight))
                     .font(.system(size: 11)).lineSpacing(3)
             } icon: {
                 Image(systemName: "powerplug").font(.system(size: 14, weight: .light))
@@ -89,26 +95,33 @@ struct ContentView: View {
         }
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Picker("Режим выбора", selection: $model.tab) {
-                    Text("Пресеты").tag(0)
-                    Text("Свой цвет").tag(1)
+                Picker(model.text(.selectionMode), selection: $model.tab) {
+                    Text(model.text(.presets)).tag(0)
+                    Text(model.text(.customColor)).tag(1)
                 }.pickerStyle(.segmented).labelsHidden().frame(width: 220)
             }
             ToolbarItem(placement: .automatic) {
                 HStack(spacing: 6) {
                     Circle().fill(model.connected ? Color.green : Color.secondary).frame(width: 5, height: 5)
-                    Text(model.connected ? "Подключено" : "Нет подключения")
+                    Text(model.text(model.connected ? .connected : .disconnected))
                         .font(.system(size: 11)).foregroundStyle(.secondary)
                 }.help(model.deviceName).accessibilityLabel(model.deviceName)
             }
             ToolbarItem(placement: .primaryAction) {
                 Menu {
-                    Toggle("Предпросмотр на подсветке", isOn: $model.livePreview)
+                    Picker("Language / Язык", selection: $model.language) {
+                        Text(model.text(.systemLanguage)).tag(AppLanguage.system)
+                        Text("English").tag(AppLanguage.english)
+                        Text("Русский").tag(AppLanguage.russian)
+                    }
+                    .accessibilityIdentifier("languagePicker")
                     Divider()
-                    Button("Обновить подключение и рекомендацию", systemImage: "arrow.clockwise") { model.refresh() }
-                    Button("Выключить свет", systemImage: "power") { model.turnOff() }
+                    Toggle(model.text(.livePreview), isOn: $model.livePreview)
+                    Divider()
+                    Button(model.text(.refresh), systemImage: "arrow.clockwise") { model.refresh() }
+                    Button(model.text(.turnOff), systemImage: "power") { model.turnOff() }
                 } label: { Image(systemName: "ellipsis") }
-                .menuIndicator(.hidden).help("Настройки подсветки").disabled(model.isBusy)
+                .menuIndicator(.hidden).help(model.text(.settings)).disabled(model.isBusy)
             }
         }
         .onChange(of: model.livePreview) { _ in model.schedulePreview() }
@@ -118,18 +131,18 @@ struct ContentView: View {
         let recommended = model.recommendation
         return HStack(alignment: .center, spacing: 24) {
             VStack(alignment: .leading, spacing: 12) {
-                Label("Рекомендуется сейчас", systemImage: "sparkles")
+                Label(model.text(.recommendedNow), systemImage: "sparkles")
                     .font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
                 Button { model.select(recommended.preset) } label: {
                     HStack(spacing: 9) {
-                        Text(recommended.preset.name).font(.system(size: 28, weight: .semibold, design: .rounded))
+                        Text(recommended.preset.localizedName(in: model.language)).font(.system(size: 28, weight: .semibold, design: .rounded))
                             .lineLimit(2).multilineTextAlignment(.leading)
                         Image(systemName: "arrow.up.right").font(.system(size: 11, weight: .medium)).foregroundStyle(.tertiary)
                     }
                 }.buttonStyle(.plain)
-                    .help("Выбрать рекомендованный цвет")
-                    .accessibilityLabel("Выбрать рекомендацию: \(recommended.preset.name)")
-                Text(recommended.preset.subtitle).font(.system(size: 13)).foregroundStyle(.secondary)
+                    .help(model.text(.selectRecommendation))
+                    .accessibilityLabel(model.text(.selectRecommendationNamed, recommended.preset.localizedName(in: model.language)))
+                Text(recommended.preset.localizedSubtitle(in: model.language)).font(.system(size: 13)).foregroundStyle(.secondary)
                 Text(recommended.context).font(.system(size: 10)).foregroundStyle(.secondary)
                     .padding(.top, 3)
             }.frame(maxWidth: .infinity, alignment: .leading)
@@ -137,8 +150,8 @@ struct ContentView: View {
                 powerOrb
                 VStack(spacing: 4) {
                     Text(model.selectedName).font(.system(size: 11, weight: .medium)).lineLimit(1)
-                    Text(model.recommendationFlow.phase == .spreading ? "Цвет заполняет окно" :
-                         model.recommendationFlow.phase == .transitioning ? "Плавный переход" : "Нажмите, чтобы включить")
+                    Text(model.text(model.recommendationFlow.phase == .spreading ? .wave :
+                         model.recommendationFlow.phase == .transitioning ? .transition : .tapToTurnOn))
                         .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
                 }
             }.frame(width: 168)
@@ -167,24 +180,24 @@ struct ContentView: View {
             }.frame(width: 126, height: 126).contentShape(Circle())
         }
         .buttonStyle(OrbButtonStyle()).disabled(model.isBusy)
-        .help("Плавно включить «\(model.selectedName)» · \(model.color.hex)")
-        .accessibilityLabel("Включить выбранный цвет: \(model.selectedName), \(model.color.hex)")
+        .help(model.text(.orbHelp, model.selectedName, model.color.hex))
+        .accessibilityLabel(model.text(.orbAccessibility, model.selectedName, model.color.hex))
         .accessibilityIdentifier("recommendationOrb")
     }
 
     private var libraryHeader: some View {
         HStack {
-            Text(model.category == "Все пресеты" ? "Палитра настроений" : model.category)
+            Text(categoryTitle)
                 .font(.system(size: 16, weight: .semibold))
             Text("\(visiblePresets.count)").font(.system(size: 11)).foregroundStyle(.tertiary)
             Spacer()
             HStack(spacing: 7) {
                 Image(systemName: "magnifyingglass").font(.system(size: 11)).foregroundStyle(.secondary)
-                TextField("Найти цвет", text: $model.search).textFieldStyle(.plain).font(.system(size: 12))
+                TextField(model.text(.findColor), text: $model.search).textFieldStyle(.plain).font(.system(size: 12))
                     .accessibilityIdentifier("presetSearch")
                 if !model.search.isEmpty {
                     Button { model.search = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }
-                        .buttonStyle(.plain).help("Очистить поиск")
+                        .buttonStyle(.plain).help(model.text(.clearSearch))
                 }
             }.padding(.horizontal, 11).padding(.vertical, 8).frame(width: 174)
                 .background(.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 10))
@@ -197,9 +210,9 @@ struct ContentView: View {
                 VStack(spacing: 12) {
                     Image(systemName: model.category == "Мои цвета" ? "heart" : "magnifyingglass")
                         .font(.system(size: 28, weight: .light)).foregroundStyle(.tertiary)
-                    Text(model.category == "Мои цвета" ? "Ваши любимые оттенки" : "Цвет не найден")
+                    Text(model.text(model.category == "Мои цвета" ? .favoriteEmpty : .noResults))
                         .font(.system(size: 14, weight: .medium))
-                    Text(model.category == "Мои цвета" ? "Создайте оттенок во вкладке «Свой цвет» и сохраните его здесь." : "Попробуйте другое название.")
+                    Text(model.text(model.category == "Мои цвета" ? .favoriteHint : .searchHint))
                         .font(.system(size: 12)).foregroundStyle(.secondary).multilineTextAlignment(.center)
                 }.frame(maxWidth: .infinity).padding(.vertical, 48)
             }
@@ -226,25 +239,25 @@ struct ContentView: View {
                         }
                     }
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(preset.name).font(.system(size: 12, weight: .medium)).lineLimit(1)
-                    Text(preset.subtitle).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
+                    Text(preset.localizedName(in: model.language)).font(.system(size: 12, weight: .medium)).lineLimit(1)
+                    Text(preset.localizedSubtitle(in: model.language)).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
                 }.padding(.horizontal, 2)
             }.contentShape(Rectangle())
         }
         .buttonStyle(PaletteButtonStyle())
-        .help("\(preset.name) · \(preset.color.hex) · \(preset.brightness)%")
-        .accessibilityLabel("\(preset.name), \(preset.color.hex), \(preset.brightness) процентов")
+        .help("\(preset.localizedName(in: model.language)) · \(preset.color.hex) · \(preset.brightness)%")
+        .accessibilityLabel(model.text(.presetAccessibility, preset.localizedName(in: model.language), preset.color.hex, String(preset.brightness)))
         .contextMenu {
-            if model.category == "Мои цвета" { Button("Удалить пресет", role: .destructive) { model.removeFavorite(preset.id) } }
+            if model.category == "Мои цвета" { Button(model.text(.deletePreset), role: .destructive) { model.removeFavorite(preset.id) } }
         }
     }
 
     private var customColor: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
-                Text("Ваш оттенок").font(.system(size: 16, weight: .semibold))
+                Text(model.text(.yourShade)).font(.system(size: 16, weight: .semibold))
                 Spacer()
-                Button { showSave() } label: { Label("Сохранить", systemImage: "heart") }
+                Button { showSave() } label: { Label(model.text(.save), systemImage: "heart") }
                     .buttonStyle(.borderless).font(.system(size: 12))
             }
             HStack(alignment: .top, spacing: 28) {
@@ -269,7 +282,7 @@ struct ContentView: View {
                                     Text("\(model.color.channels[index])").monospacedDigit()
                                 }.font(.system(size: 11))
                                 Slider(value: Binding(get: { Double(model.color.channels[index]) }, set: { model.setChannel(index, Int($0.rounded())) }), in: 0...255)
-                                    .controlSize(.small).accessibilityLabel("Канал \(label)")
+                                    .controlSize(.small).accessibilityLabel(model.text(.channel, label))
                             }
                         }
                     }
@@ -291,38 +304,38 @@ struct ContentView: View {
                     Image(systemName: "sun.max").font(.system(size: 12)).foregroundStyle(.secondary)
                     Slider(value: $model.brightness, in: 0...100)
                         .frame(minWidth: 70, idealWidth: 110, maxWidth: 140).controlSize(.small)
-                        .accessibilityLabel("Яркость").onChange(of: model.brightness) { _ in model.schedulePreview() }
+                        .accessibilityLabel(model.text(.brightness)).onChange(of: model.brightness) { _ in model.schedulePreview() }
                     Text("\(Int(model.brightness.rounded()))%")
                         .font(.system(size: 11)).monospacedDigit().frame(width: 34, alignment: .trailing)
                 }
                 Button { model.turnOff() } label: { Image(systemName: "power").frame(width: 16, height: 18) }
-                    .modifier(LumaButton(prominent: false)).help("Выключить свет").accessibilityLabel("Выключить свет")
+                    .modifier(LumaButton(prominent: false)).help(model.text(.turnOff)).accessibilityLabel(model.text(.turnOff))
                     .disabled(model.isBusy)
                 Button { model.apply() } label: {
                     HStack(spacing: 6) {
                         if model.isBusy { ProgressView().controlSize(.mini) }
-                        Text("Включить")
+                        Text(model.text(.turnOn))
                     }.font(.system(size: 12, weight: .medium)).frame(minWidth: 68, minHeight: 18)
                 }.modifier(LumaButton(prominent: true)).disabled(model.isBusy)
-                    .help("Плавно включить выбранный цвет · ⌘↩")
+                    .help(model.text(.applyHelp))
                 Menu {
-                    Button("Включить и закрыть") { model.apply(quit: true) }
-                    Button("Сохранить в мои цвета", systemImage: "heart") { showSave() }
+                    Button(model.text(.applyAndQuit)) { model.apply(quit: true) }
+                    Button(model.text(.saveFavorite), systemImage: "heart") { showSave() }
                 } label: { Image(systemName: "chevron.down").font(.system(size: 10, weight: .semibold)) }
                     .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().disabled(model.isBusy)
-                    .help("Дополнительные действия")
+                    .help(model.text(.moreActions))
             }
             HStack(spacing: 8) {
                 Text(model.status).lineLimit(1).help(model.status)
                 Spacer(minLength: 0)
-                if model.livePreview { Label("Предпросмотр", systemImage: "eye").fixedSize() }
+                if model.livePreview { Label(model.text(.preview), systemImage: "eye").fixedSize() }
             }.font(.system(size: 10)).foregroundStyle(.secondary)
         }
         .padding(16).modifier(LumaControlSurface())
     }
 
     private func showSave() {
-        model.savedName = model.selectedName == "Свой цвет" ? "" : model.selectedName
+        model.savedName = model.isCustomColor ? "" : model.selectedName
         model.showSave = true
     }
 
@@ -331,17 +344,17 @@ struct ContentView: View {
             HStack(spacing: 14) {
                 RoundedRectangle(cornerRadius: 14).fill(model.color.swiftColor.gradient).frame(width: 52, height: 52)
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("Сохранить оттенок").font(.system(size: 18, weight: .semibold))
+                    Text(model.text(.saveShade)).font(.system(size: 18, weight: .semibold))
                     Text("\(model.color.hex) · \(Int(model.brightness.rounded()))%")
                         .font(.system(size: 12)).foregroundStyle(.secondary)
                 }
             }
-            TextField("Название", text: $model.savedName).textFieldStyle(.roundedBorder)
+            TextField(model.text(.name), text: $model.savedName).textFieldStyle(.roundedBorder)
                 .onSubmit { model.saveFavorite() }
             HStack {
                 Spacer()
-                Button("Отмена") { model.showSave = false }.keyboardShortcut(.cancelAction)
-                Button("Сохранить") { model.saveFavorite() }.buttonStyle(.borderedProminent)
+                Button(model.text(.cancel)) { model.showSave = false }.keyboardShortcut(.cancelAction)
+                Button(model.text(.save)) { model.saveFavorite() }.buttonStyle(.borderedProminent)
                     .disabled(model.savedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }.padding(28).frame(width: 360)
@@ -402,7 +415,7 @@ struct ColorSquare: View {
                 .gesture(DragGesture(minimumDistance: 0).onChanged { gesture in
                     model.setHSV(s: gesture.location.x / max(1, geometry.size.width), v: 1 - gesture.location.y / max(1, geometry.size.height))
                 })
-                .accessibilityLabel("Цветовой квадрат. Для точного выбора используйте HEX или RGB-ползунки.")
+                .accessibilityLabel(model.text(.colorSquare))
         }
     }
 }
@@ -417,7 +430,7 @@ struct HueStrip: View {
                     .offset(x: max(0, min(geometry.size.width - 9, model.hue * geometry.size.width - 4.5)))
             }.clipShape(Capsule()).contentShape(Rectangle())
                 .gesture(DragGesture(minimumDistance: 0).onChanged { model.setHSV(h: $0.location.x / max(1, geometry.size.width)) })
-                .accessibilityLabel("Оттенок").accessibilityAdjustableAction { direction in
+                .accessibilityLabel(model.text(.hue)).accessibilityAdjustableAction { direction in
                     model.setHSV(h: model.hue + (direction == .increment ? 0.02 : -0.02))
                 }
         }

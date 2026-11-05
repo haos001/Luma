@@ -13,6 +13,7 @@ No workflow publishes a release automatically. The included CI only checks, buil
 ## Manual validation
 
 - [ ] Light/dark appearance, minimum window size, sidebar, both color-selection tabs.
+- [ ] English/Russian switching, recommendation dates, search, error text, and language persistence; existing favorites stay intact.
 - [ ] Preset selection and invalid HEX input.
 - [ ] Recommendation does not override the selected target.
 - [ ] Saved favorites survive restart.

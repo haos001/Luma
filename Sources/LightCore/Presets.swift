@@ -108,7 +108,7 @@ public struct Recommendation: Equatable, Sendable {
 }
 
 public enum RecommendationEngine {
-    public static func recommend(at date: Date, calendar: Calendar = .current) -> Recommendation {
+    public static func recommend(at date: Date, calendar: Calendar = .current, language: AppLanguage = .system) -> Recommendation {
         let season = Season.forMonth(calendar.component(.month, from: date))
         let period = DayPeriod.forHour(calendar.component(.hour, from: date))
         let weekend = calendar.isDateInWeekend(date)
@@ -127,14 +127,14 @@ public enum RecommendationEngine {
         let year = calendar.component(.year, from: date)
         let preset = pool[(day + year) % pool.count]
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ru_RU")
+        formatter.locale = language.locale
         formatter.calendar = calendar
         formatter.timeZone = calendar.timeZone
-        formatter.dateFormat = "EEEE, d MMMM · HH:mm"
+        formatter.dateFormat = language.resolved() == .russian ? "EEEE, d MMMM · HH:mm" : "EEEE, MMMM d · HH:mm"
         let dateText = formatter.string(from: date)
         let capitalizedDate = dateText.prefix(1).uppercased() + dateText.dropFirst()
         return Recommendation(preset: preset,
-            context: "\(capitalizedDate) · \(season.rawValue.lowercased())",
-            explanation: "\(period.rawValue) · \(weekend ? "неспешный выходной" : "рабочий ритм"). \(preset.subtitle).")
+            context: "\(capitalizedDate) · \(season.localizedName(in: language).lowercased())",
+            explanation: "\(period.localizedName(in: language)) · \(language.text(weekend ? .weekend : .weekday)). \(preset.localizedSubtitle(in: language)).")
     }
 }

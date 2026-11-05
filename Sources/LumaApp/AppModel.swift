@@ -11,14 +11,23 @@ final class AppModel: ObservableObject {
     @Published var saturation: Double
     @Published var value: Double
     @Published var hexDraft: String
-    @Published var selectedName = "Последний цвет"
+    @Published private var selectedPreset: Preset?
+    @Published var language: AppLanguage {
+        didSet {
+            savedState.language = language
+            recommendation = RecommendationEngine.recommend(at: Date(), language: language)
+            persist()
+        }
+    }
     @Published var favorites: [Preset]
     @Published var recommendation = RecommendationEngine.recommend(at: Date())
-    @Published var deviceName = "Проверяем подключение…"
+    @Published private var deviceProductName: String?
+    @Published private var deviceChecked = false
     @Published var connected = false
     @Published var isSending = false
     @Published var livePreview = false
-    @Published var status = "Готово к включению."
+    @Published private var statusMessage = LumaMessage(.ready)
+    @Published private var statusPreset: Preset?
     @Published var error: String?
     @Published var savedName = ""
     @Published var showSave = false
@@ -44,14 +53,20 @@ final class AppModel: ObservableObject {
         let preview = Self.previewConfiguration
         store = preview ? StateStore(url: URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("luma-ui-preview.json")) : StateStore()
         savedState = store.load()
+        let arguments = CommandLine.arguments
+        if preview, let index = arguments.firstIndex(of: "--language"), arguments.indices.contains(index + 1),
+           let override = AppLanguage(rawValue: arguments[index + 1]) {
+            language = override
+        } else { language = savedState.language }
         lastOutput = savedState.lastCommandWasOff ? .black : savedState.color.scaled(percent: savedState.brightness)
         color = savedState.color; brightness = Double(savedState.brightness); favorites = savedState.favorites
         let hsv = savedState.color.hsv
         hue = hsv.hue; saturation = hsv.saturation; value = hsv.value
         hexDraft = savedState.color.hex
-        selectedName = (savedState.favorites + PresetCatalog.all).first {
+        selectedPreset = (savedState.favorites + PresetCatalog.all).first {
             $0.color == savedState.color && $0.brightness == savedState.brightness
-        }?.name ?? "Свой цвет"
+        }
+        recommendation = RecommendationEngine.recommend(at: Date(), language: language)
     }
 
     private static var previewConfiguration: Bool {
@@ -59,16 +74,36 @@ final class AppModel: ObservableObject {
     }
     var previewOnly: Bool { Self.previewConfiguration }
     var isBusy: Bool { isSending || recommendationFlow.phase != .idle }
+    var selectedName: String { selectedPreset?.localizedName(in: language) ?? text(.customColor) }
+    var isCustomColor: Bool { selectedPreset == nil }
+    var status: String {
+        if let preset = statusPreset {
+            let name = preset.id == "pending-selection" ? text(.customColor) : preset.localizedName(in: language)
+            if statusMessage.key == .brightening { return text(.brightening, name) }
+            if statusMessage.key == .applied { return text(.applied, name, preset.color.hex, String(preset.brightness)) }
+        }
+        return statusMessage.localized(in: language)
+    }
+    var deviceName: String {
+        if previewOnly { return text(.demoDevice) }
+        if connected { return deviceProductName ?? "ROBOBLOQ USBHID" }
+        return text(deviceChecked ? .disconnectedDevice : .checking)
+    }
+    func text(_ key: LumaText, _ arguments: String...) -> String { language.format(key, arguments: arguments) }
+    private func errorText(_ error: Error) -> String {
+        (error as? LightError)?.localizedDescription(in: language) ?? error.localizedDescription
+    }
 
     func refresh() {
-        if !isBusy { recommendation = RecommendationEngine.recommend(at: Date()) }
-        guard !previewOnly else { deviceName = "Демо · команды USB отключены"; connected = false; return }
+        if !isBusy { recommendation = RecommendationEngine.recommend(at: Date(), language: language) }
+        guard !previewOnly else { connected = false; return }
         usbQueue.async {
             let result = Result { try HIDTransport.status() }
             DispatchQueue.main.async {
+                self.deviceChecked = true
                 switch result {
-                case .success(let device): self.connected = true; self.deviceName = device.name
-                case .failure: self.connected = false; self.deviceName = "Подсветка не подключена"
+                case .success(let device): self.connected = true; self.deviceProductName = device.name
+                case .failure: self.connected = false; self.deviceProductName = nil
                 }
             }
         }
@@ -76,7 +111,7 @@ final class AppModel: ObservableObject {
 
     func select(_ preset: Preset) {
         guard !isBusy else { return }
-        selectedName = preset.name
+        selectedPreset = preset
         brightness = Double(preset.brightness)
         setColor(preset.color, custom: false)
     }
@@ -86,7 +121,7 @@ final class AppModel: ObservableObject {
         let hsv = rgb.hsv
         if hsv.saturation > 0 { hue = hsv.hue }
         saturation = hsv.saturation; value = hsv.value
-        if custom { selectedName = "Свой цвет" }
+        if custom { selectedPreset = nil }
         schedulePreview()
     }
 
@@ -95,12 +130,12 @@ final class AppModel: ObservableObject {
         if let s { saturation = min(1, max(0, s)) }
         if let v { value = min(1, max(0, v)) }
         color = RGB.hsv(hue: hue, saturation: saturation, value: value)
-        hexDraft = color.hex; selectedName = "Свой цвет"
+        hexDraft = color.hex; selectedPreset = nil
         schedulePreview()
     }
 
     @discardableResult func commitHex() -> Bool {
-        guard let rgb = RGB(hex: hexDraft) else { error = "Введите шесть HEX-цифр, например #C98758."; return false }
+        guard let rgb = RGB(hex: hexDraft) else { error = text(.invalidHex); return false }
         if rgb != color { setColor(rgb) } else { hexDraft = rgb.hex }
         return true
     }
@@ -137,7 +172,7 @@ final class AppModel: ObservableObject {
     }
 
     private func send(packet: [UInt8], off: Bool, quit: Bool, preview: Bool) {
-        guard !previewOnly else { status = "Демо: USB-команда не отправлялась."; return }
+        guard !previewOnly else { statusMessage = LumaMessage(.demoCommand); return }
         let sentColor = color, sentBrightness = Int(brightness.rounded())
         isSending = true
         usbQueue.async {
@@ -153,11 +188,11 @@ final class AppModel: ObservableObject {
                     self.savedState.lastApplied = Date()
                     self.savedState.lastCommandWasOff = off
                     self.persist()
-                    self.status = off ? "Команда выключения отправлена." : "Отправлено: \(sentColor.hex) · \(sentBrightness)%. Можно закрыть приложение."
+                    self.statusMessage = off ? LumaMessage(.offSent) : LumaMessage(.colorSent, sentColor.hex, String(sentBrightness))
                     if quit && self.error == nil { NSApp.terminate(nil) }
                 case .failure(let failure):
-                    self.status = "Команда не отправлена."
-                    self.error = failure.localizedDescription
+                    self.statusMessage = LumaMessage(.notSent)
+                    self.error = self.errorText(failure)
                     self.livePreview = false
                     self.queuedPreview = false
                 }
@@ -184,13 +219,13 @@ final class AppModel: ObservableObject {
         guard !isBusy, commitHex(), recommendationFlow.begin() != nil else { return }
         previewTask?.cancel(); queuedPreview = false
         // Snapshot exactly the selected values. Recommendation must never replace this target.
-        let preset = Preset(id: "pending-selection", name: selectedName, subtitle: "",
+        let preset = Preset(id: selectedPreset?.id ?? "pending-selection", name: selectedPreset?.name ?? selectedName, subtitle: "",
                             color: color, brightness: Int(brightness.rounded()))
         pendingSelection = preset
         quitAfterTransition = quit
         previousAmbient = ambientColor
         rippleColor = preset.color
-        status = "Цвет мягко заполняет окно…"
+        statusMessage = LumaMessage(.waveStatus)
         rippleStartedAt = Date()
     }
 
@@ -201,11 +236,12 @@ final class AppModel: ObservableObject {
         rippleStartedAt = nil
         guard !previewOnly else {
             recommendationFlow.finish(); pendingSelection = nil
-            status = "Демо: волна завершена, USB-команда не отправлялась."
+            statusMessage = LumaMessage(.demoWave)
             return
         }
         isSending = true
-        status = "Мягко гасим прежний цвет…"
+        statusPreset = preset
+        statusMessage = LumaMessage(.dimming)
         let start = lastOutput, end = preset.color.scaled(percent: preset.brightness)
         usbQueue.async {
             var lastWritten = start
@@ -216,9 +252,9 @@ final class AppModel: ObservableObject {
                     previousStage = frame.stage
                     DispatchQueue.main.async {
                         switch frame.stage {
-                        case .dimming: self.status = "Мягко гасим прежний цвет…"
-                        case .dark: self.status = "Прежний цвет погас…"
-                        case .brightening: self.status = "Плавно включаем «\(preset.name)»…"
+                        case .dimming: self.statusMessage = LumaMessage(.dimming)
+                        case .dark: self.statusMessage = LumaMessage(.dark)
+                        case .brightening: self.statusMessage = LumaMessage(.brightening, preset.name)
                         }
                     }
                 }
@@ -237,13 +273,13 @@ final class AppModel: ObservableObject {
                     self.savedState.lastApplied = Date()
                     self.savedState.lastCommandWasOff = false
                     self.persist()
-                    self.status = "Плавно включён: \(preset.name) · \(preset.color.hex) · \(preset.brightness)%."
+                    self.statusMessage = LumaMessage(.applied, preset.name, preset.color.hex, String(preset.brightness))
                     if self.quitAfterTransition && self.error == nil && !self.terminationWaiting { NSApp.terminate(nil) }
                 case .failure(let failure):
                     self.ambientColor = self.previousAmbient
                     self.livePreview = false
-                    self.status = "Переход прерван. Проверьте подключение."
-                    self.error = failure.localizedDescription
+                    self.statusMessage = LumaMessage(.interrupted)
+                    self.error = self.errorText(failure)
                 }
                 if self.terminationWaiting {
                     self.terminationWaiting = false
@@ -257,8 +293,8 @@ final class AppModel: ObservableObject {
         guard commitHex() else { return }
         let name = String(savedName.trimmingCharacters(in: .whitespacesAndNewlines).prefix(60))
         guard !name.isEmpty else { return }
-        guard favorites.count < 100 else { error = "Можно сохранить до 100 своих пресетов."; return }
-        favorites.append(Preset(id: UUID().uuidString, name: name, subtitle: "Мой пресет", color: color,
+        guard favorites.count < 100 else { error = text(.favoriteLimit); return }
+        favorites.append(Preset(id: UUID().uuidString, name: name, subtitle: LumaText.myPreset.rawValue, color: color,
                                 brightness: Int(brightness.rounded())))
         savedName = ""; showSave = false
         persist()
@@ -271,7 +307,7 @@ final class AppModel: ObservableObject {
     private func persist() {
         savedState.favorites = favorites
         do { try store.save(savedState) }
-        catch { self.error = "Не удалось сохранить настройки: \(error.localizedDescription)" }
+        catch { self.error = text(.saveError, error.localizedDescription) }
     }
 }
 

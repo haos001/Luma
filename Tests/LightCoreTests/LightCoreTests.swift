@@ -190,6 +190,69 @@ final class LightCoreTests {
         check(!flow.reachedEdges(token: cancelled))
         check(flow.reachedEdges(token: next))
     }
+
+    func testLanguageResolutionAndStrings() {
+        equal(AppLanguage.system.resolved(preferredLanguages: ["ru-RU", "en-US"]), .russian)
+        equal(AppLanguage.system.resolved(preferredLanguages: ["de-DE", "en-GB", "ru-RU"]), .english)
+        equal(AppLanguage.system.resolved(preferredLanguages: ["ru_RU"]), .russian)
+        equal(AppLanguage.system.resolved(preferredLanguages: ["fr-FR"]), .english)
+        equal(AppLanguage.english.resolved(preferredLanguages: ["ru-RU"]), .english)
+        for key in LumaText.allCases {
+            check(!key.rawValue.isEmpty && !key.english.isEmpty)
+            check(key.english.range(of: "[А-Яа-яЁё]", options: .regularExpression) == nil)
+            equal(key.rawValue.components(separatedBy: "%@").count, key.english.components(separatedBy: "%@").count)
+        }
+        equal(AppLanguage.english.text(.colorSent, "#BD00FF", "100"), "Sent: #BD00FF · 100%. You can quit the app.")
+        equal(AppLanguage.russian.text(.applied, "Роза", "#BD00FF", "28"), "Плавно включён: Роза · #BD00FF · 28%.")
+        for error in [LightError.notFound, .multipleDevices, .deviceBusy(-1), .writeFailed(-2)] {
+            check(error.localizedDescription(in: .english).range(of: "[А-Яа-яЁё]", options: .regularExpression) == nil)
+            check(error.localizedDescription(in: .russian) != error.localizedDescription(in: .english))
+        }
+    }
+
+    func testLocalizedPresetsAndFavorites() {
+        for preset in PresetCatalog.all {
+            check(preset.localizedName(in: .english) != preset.name)
+            check(preset.localizedSubtitle(in: .english) != preset.subtitle)
+            equal(preset.localizedName(in: .russian), preset.name)
+            check(preset.matches(search: preset.localizedName(in: .english)))
+            check(preset.matches(search: preset.name))
+        }
+        let favorite = Preset(id: "user-color", name: "Моя Rose", subtitle: "Мой пресет", color: RGB(1, 2, 3))
+        equal(favorite.localizedName(in: .english), "Моя Rose")
+        equal(favorite.localizedName(in: .russian), "Моя Rose")
+        equal(favorite.localizedSubtitle(in: .english), "My preset")
+        equal(favorite.localizedSubtitle(in: .russian), "Мой пресет")
+        for group in PresetGroup.allCases { check(group.localizedName(in: .english) != group.rawValue) }
+    }
+
+    func testLanguagePersistenceAndLegacyMigration() throws {
+        let old = SavedState(color: RGB(5, 20, 80), brightness: 28, favorites: [PresetCatalog.all[0]], lastCommandWasOff: true)
+        var object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(old)) as! [String: Any]
+        object.removeValue(forKey: "language")
+        let legacy = try JSONDecoder().decode(SavedState.self, from: JSONSerialization.data(withJSONObject: object))
+        equal(legacy, old)
+        object["language"] = "future-language"
+        equal(try JSONDecoder().decode(SavedState.self, from: JSONSerialization.data(withJSONObject: object)), old)
+        for language in AppLanguage.allCases {
+            var saved = old; saved.language = language
+            equal(try JSONDecoder().decode(SavedState.self, from: JSONEncoder().encode(saved)), saved)
+        }
+    }
+
+    func testLocalizedRecommendationsDoNotChangeColor() {
+        for month in 1...12 {
+            for hour in [0, 6, 10, 15, 18, 23] {
+                let instant = date(month, 15, hour)
+                let ru = RecommendationEngine.recommend(at: instant, calendar: calendar, language: .russian)
+                let en = RecommendationEngine.recommend(at: instant, calendar: calendar, language: .english)
+                equal(ru.preset, en.preset)
+                check(ru.context != en.context)
+                check(en.context.range(of: "[А-Яа-яЁё]", options: .regularExpression) == nil)
+                check(en.explanation.range(of: "[А-Яа-яЁё]", options: .regularExpression) == nil)
+            }
+        }
+    }
 }
 
 @main
@@ -209,7 +272,11 @@ struct TestRunner {
             ("Persistence", tests.testStateRoundTripAndCorruptionFallback),
             ("Smooth fade", tests.testSmoothTransitionFrames),
             ("Fade out / black / selected color fade in", tests.testBlackoutTransition),
-            ("Ripple gates USB / cancellation / duplicate clicks", tests.testRecommendationFlowGatesUSB)
+            ("Ripple gates USB / cancellation / duplicate clicks", tests.testRecommendationFlowGatesUSB),
+            ("Language resolution / complete UI strings / errors", tests.testLanguageResolutionAndStrings),
+            ("Bilingual presets / search / user names", tests.testLocalizedPresetsAndFavorites),
+            ("Language persistence / v0.4 migration", tests.testLanguagePersistenceAndLegacyMigration),
+            ("Recommendation language preserves color", tests.testLocalizedRecommendationsDoNotChangeColor)
         ]
         for (name, test) in cases {
             let before = failures

@@ -6,11 +6,25 @@ public struct SavedState: Codable, Equatable, Sendable {
     public var favorites: [Preset]
     public var lastApplied: Date?
     public var lastCommandWasOff: Bool
+    public var language: AppLanguage
 
     public init(color: RGB = RGB(201, 135, 88), brightness: Int = 100, favorites: [Preset] = [],
-                lastApplied: Date? = nil, lastCommandWasOff: Bool = false) {
+                lastApplied: Date? = nil, lastCommandWasOff: Bool = false, language: AppLanguage = .system) {
         self.color = color; self.brightness = min(100, max(0, brightness)); self.favorites = favorites
         self.lastApplied = lastApplied; self.lastCommandWasOff = lastCommandWasOff
+        self.language = language
+    }
+
+    private enum CodingKeys: String, CodingKey { case color, brightness, favorites, lastApplied, lastCommandWasOff, language }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        color = try values.decode(RGB.self, forKey: .color)
+        brightness = try values.decode(Int.self, forKey: .brightness)
+        favorites = try values.decode([Preset].self, forKey: .favorites)
+        lastApplied = try values.decodeIfPresent(Date.self, forKey: .lastApplied)
+        lastCommandWasOff = try values.decodeIfPresent(Bool.self, forKey: .lastCommandWasOff) ?? false
+        language = try values.decodeIfPresent(AppLanguage.self, forKey: .language) ?? .system
     }
 
     public func validated() -> SavedState {

@@ -3,12 +3,13 @@ import IOKit.hid
 
 public enum LightError: LocalizedError {
     case notFound, multipleDevices, deviceBusy(Int32), writeFailed(Int32)
-    public var errorDescription: String? {
+    public var errorDescription: String? { localizedDescription(in: .system) }
+    public func localizedDescription(in language: AppLanguage) -> String {
         switch self {
-        case .notFound: return "Подсветка не найдена. Проверьте подключение USB и нажмите «Обновить»."
-        case .multipleDevices: return "Найдено несколько подходящих контроллеров. Оставьте подключённым один."
-        case .deviceBusy(let code): return "Не удалось открыть контроллер (\(code)). Закройте другие приложения подсветки и повторите."
-        case .writeFailed(let code): return "USB-команда не отправлена (\(code)). Проверьте кабель и закройте другие приложения подсветки."
+        case .notFound: return language.text(.notFound)
+        case .multipleDevices: return language.text(.multipleDevices)
+        case .deviceBusy(let code): return language.text(.deviceBusy, String(code))
+        case .writeFailed(let code): return language.text(.writeFailed, String(code))
         }
     }
 }

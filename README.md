@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/haos001/Luma/releases/download/v0.4.0/Luma-0.4.0-macOS-arm64.zip"><strong>Download for Apple Silicon</strong></a> ·
+  <a href="https://github.com/haos001/Luma/releases/download/v0.5.0/Luma-0.5.0-macOS-arm64.zip"><strong>Download for Apple Silicon</strong></a> ·
   <a href="https://github.com/haos001/Luma/releases">All releases</a> ·
   <a href="README.ru.md">Русский</a> ·
   <a href="#installation">Install</a> ·
@@ -73,8 +73,6 @@ Luma refreshes the recommendation when you open or return to the app, or use Ref
 
 ### Two languages, one familiar app
 
-> Bilingual UI is new in the 0.5.0 source version. The downloadable 0.4.0 release linked below still has the Russian-only interface; the 0.5.0 app release is being prepared.
-
 **English and Russian are built in.** Interface labels, all 40 preset names and descriptions, recommendations, tooltips, and device errors follow your chosen language. Open **… → Language / Язык** and choose **English**, **Русский**, or **Follow macOS**. Changes appear immediately, without restarting; Luma remembers your choice.
 
 On first launch, Luma follows the first supported language in your macOS language list, falling back to English. Your own favorite names stay exactly as you wrote them. Search understands built-in preset names in either language. Changing language does not send a command to the backlight.
@@ -83,9 +81,9 @@ On first launch, Luma follows the first supported language in your macOS languag
 
 ### Download the app
 
-Get **Luma 0.4.0** from [GitHub Releases](https://github.com/haos001/Luma/releases/tag/v0.4.0), including the ready-to-run app and its SHA-256 checksum. You do not need Xcode, Swift, or a package manager to use a downloaded build.
+Get **Luma 0.5.0** from [GitHub Releases](https://github.com/haos001/Luma/releases/tag/v0.5.0), including the ready-to-run app and its SHA-256 checksum. You do not need Xcode, Swift, or a package manager to use a downloaded build.
 
-1. [Download Luma for Apple Silicon](https://github.com/haos001/Luma/releases/download/v0.4.0/Luma-0.4.0-macOS-arm64.zip).
+1. [Download Luma for Apple Silicon](https://github.com/haos001/Luma/releases/download/v0.5.0/Luma-0.5.0-macOS-arm64.zip).
 2. Unzip it and drag **Luma.app** into **Applications**.
 3. Quit any other app controlling the backlight, then open Luma.
 

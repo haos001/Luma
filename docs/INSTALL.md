@@ -4,7 +4,7 @@ English · [Русский](INSTALL.ru.md)
 
 ## Ready-to-run app
 
-Download `Luma-0.4.0-macOS-arm64.zip` for **Apple Silicon** from [the Luma 0.4.0 release](https://github.com/haos001/Luma/releases/tag/v0.4.0). An Intel build is not provided yet. The minimum deployment target is macOS 13; Liquid Glass appears only on macOS 26+.
+Download `Luma-0.5.0-macOS-arm64.zip` for **Apple Silicon** from [the Luma 0.5.0 release](https://github.com/haos001/Luma/releases/tag/v0.5.0). An Intel build is not provided yet. The minimum deployment target is macOS 13; Liquid Glass appears only on macOS 26+.
 
 1. Get the ZIP and matching `.zip.sha256` from the same Luma GitHub release.
 2. Optionally verify the download before opening it, using the command below.
@@ -19,7 +19,7 @@ Xcode and Swift are only needed to build from source, not to run a release. `lum
 Put the ZIP and its checksum file in the same folder. Open Terminal in that folder and run:
 
 ```sh
-shasum -a 256 -c Luma-0.4.0-macOS-arm64.zip.sha256
+shasum -a 256 -c Luma-0.5.0-macOS-arm64.zip.sha256
 ```
 
 The expected result ends in `OK`. If it says `FAILED`, do not open that archive; download it again from the intended release. Adjust the filename for later versions. A checksum detects file changes; it does not independently prove the publisher's identity.
@@ -43,6 +43,8 @@ open dist/Luma.app
 Drag `dist/Luma.app` to Applications. Build scripts do not install the app or change your backlight.
 
 ## First run
+
+Luma supports **English and Russian**. Open **… → Language / Язык** to switch instantly, or choose **Follow macOS**. The language choice is saved. Your favorite names, RGB colors, and brightness are unaffected. Version 0.4.0 settings load without resetting them.
 
 Quit any other application controlling the strip. Opening Luma does not automatically change the light. Pick a color and click the glowing circle or Turn on. Use `--preview` to explore without sending USB reports.
 

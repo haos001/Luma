@@ -18,8 +18,11 @@ public enum LightTransition {
         let count = min(300, max(1, steps))
         return (0...count).map { index in
             let t = eased(Double(index) / Double(count))
-            let values = zip(start.channels, end.channels).map { a, b in
-                UInt8((Double(a) + (Double(b) - Double(a)) * t).rounded())
+            let values: [UInt8] = zip(start.channels, end.channels).map { a, b in
+                let initial = Double(a)
+                let delta = Double(b) - initial
+                let interpolated = initial + delta * t
+                return UInt8(interpolated.rounded())
             }
             return RGB(values[0], values[1], values[2])
         }

@@ -1,0 +1,48 @@
+name: Build and check
+
+"on":
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos:
+    name: macOS · core checks and app bundle
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Show toolchain
+        run: |
+          swift --version
+          xcrun --sdk macosx --show-sdk-version
+      - name: Validate scripts and metadata
+        run: |
+          for script in scripts/*.sh; do bash -n "$script"; done
+          plutil -lint Resources/Info.plist
+      - name: Run hardware-free checks
+        run: bash scripts/test.sh
+      - name: Build the native app
+        run: bash scripts/build.sh
+      - name: Smoke-test packet generation without USB
+        run: test "$(./dist/lumactl dry-run '#BD00FF' 100)" = '52 42 10 02 86 01 BD 00 FF 60 61 00 00 00 FE A8'
+      - name: Package ad-hoc-signed artifacts
+        run: bash scripts/package-release.sh
+      - name: Upload build artifacts (not a public release)
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: Luma-macOS-build
+          path: dist/releases/*
+          if-no-files-found: error
+          retention-days: 14

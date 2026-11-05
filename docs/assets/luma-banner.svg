@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="400" viewBox="0 0 1280 400" role="img" aria-labelledby="title desc">
+  <title id="title">Luma</title>
+  <desc id="desc">A little light. A better atmosphere. Native ambient lighting for macOS.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#11121a"/><stop offset="1" stop-color="#1d1724"/></linearGradient>
+    <radialGradient id="halo"><stop stop-color="#c58eb1" stop-opacity=".38"/><stop offset=".55" stop-color="#c58eb1" stop-opacity=".12"/><stop offset="1" stop-color="#c58eb1" stop-opacity="0"/></radialGradient>
+    <linearGradient id="orb" x1=".15" y1="0" x2=".9" y2="1"><stop stop-color="#ecc3ba"/><stop offset=".48" stop-color="#d59bb9"/><stop offset="1" stop-color="#937dac"/></linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff" stop-opacity=".56"/><stop offset="1" stop-color="#fff" stop-opacity=".04"/></linearGradient>
+  </defs>
+  <rect width="1280" height="400" rx="28" fill="url(#background)"/>
+  <circle cx="1010" cy="200" r="310" fill="url(#halo)"/>
+  <g fill="none" stroke="#d8bdce" stroke-opacity=".08"><circle cx="1010" cy="200" r="148"/><circle cx="1010" cy="200" r="191"/><circle cx="1010" cy="200" r="235"/></g>
+  <text x="76" y="147" fill="#faf5f8" font-size="83" font-weight="600" letter-spacing="-4" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif">Luma</text>
+  <text x="79" y="209" fill="#e7dce7" font-size="25" letter-spacing="-.4" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif">A little light. A better atmosphere.</text>
+  <text x="80" y="254" fill="#a59dac" font-size="16" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif">Native ambient lighting for macOS.</text>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-size="11" letter-spacing="1.4" fill="#c8bacd">
+    <text x="80" y="334">PICK A COLOR</text><circle cx="216" cy="330" r="2" fill="#8f789d"/>
+    <text x="239" y="334">SETTLE IN</text><circle cx="347" cy="330" r="2" fill="#8f789d"/>
+    <text x="370" y="334">CLOSE THE APP</text>
+  </g>
+  <circle cx="1010" cy="200" r="103" fill="url(#orb)"/>
+  <circle cx="1010" cy="200" r="102" fill="none" stroke="url(#shine)" stroke-width="1.5"/>
+  <path d="M1010 165v36 M989 178a31 31 0 1 0 42 0" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-opacity=".9"/>
+  <circle cx="906" cy="338" r="4" fill="#a9c5b7"/><circle cx="926" cy="338" r="4" fill="#e3ba96"/><circle cx="946" cy="338" r="4" fill="#c493b9"/>
+  <text x="964" y="342" fill="#a99cac" font-size="11" letter-spacing="1" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif">40 QUIET MOODS</text>
+</svg>

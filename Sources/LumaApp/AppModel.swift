@@ -1,0 +1,283 @@
+import AppKit
+import SwiftUI
+import LightCore
+
+@MainActor
+final class AppModel: ObservableObject {
+    static let shared = AppModel()
+    @Published var color: RGB
+    @Published var brightness: Double
+    @Published var hue: Double
+    @Published var saturation: Double
+    @Published var value: Double
+    @Published var hexDraft: String
+    @Published var selectedName = "Последний цвет"
+    @Published var favorites: [Preset]
+    @Published var recommendation = RecommendationEngine.recommend(at: Date())
+    @Published var deviceName = "Проверяем подключение…"
+    @Published var connected = false
+    @Published var isSending = false
+    @Published var livePreview = false
+    @Published var status = "Готово к включению."
+    @Published var error: String?
+    @Published var savedName = ""
+    @Published var showSave = false
+    @Published var tab = 0
+    @Published var category = "Все пресеты"
+    @Published var search = ""
+    @Published private(set) var recommendationFlow = RecommendationFlow()
+    @Published private(set) var rippleStartedAt: Date?
+    @Published private(set) var rippleColor = RGB.black
+    @Published private(set) var ambientColor: RGB?
+    private var pendingSelection: Preset?
+    private var quitAfterTransition = false
+    private var lastOutput: RGB
+    private var previousAmbient: RGB?
+    private let store: StateStore
+    private var savedState: SavedState
+    private let usbQueue = DispatchQueue(label: "local.luma.usb", qos: .userInitiated)
+    private var previewTask: Task<Void, Never>?
+    private var queuedPreview = false
+    var terminationWaiting = false
+
+    private init() {
+        let preview = Self.previewConfiguration
+        store = preview ? StateStore(url: URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("luma-ui-preview.json")) : StateStore()
+        savedState = store.load()
+        lastOutput = savedState.lastCommandWasOff ? .black : savedState.color.scaled(percent: savedState.brightness)
+        color = savedState.color; brightness = Double(savedState.brightness); favorites = savedState.favorites
+        let hsv = savedState.color.hsv
+        hue = hsv.hue; saturation = hsv.saturation; value = hsv.value
+        hexDraft = savedState.color.hex
+        selectedName = (savedState.favorites + PresetCatalog.all).first {
+            $0.color == savedState.color && $0.brightness == savedState.brightness
+        }?.name ?? "Свой цвет"
+    }
+
+    private static var previewConfiguration: Bool {
+        CommandLine.arguments.contains("--preview") || Bundle.main.object(forInfoDictionaryKey: "LumaUIPreview") as? Bool == true
+    }
+    var previewOnly: Bool { Self.previewConfiguration }
+    var isBusy: Bool { isSending || recommendationFlow.phase != .idle }
+
+    func refresh() {
+        if !isBusy { recommendation = RecommendationEngine.recommend(at: Date()) }
+        guard !previewOnly else { deviceName = "Демо · команды USB отключены"; connected = false; return }
+        usbQueue.async {
+            let result = Result { try HIDTransport.status() }
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let device): self.connected = true; self.deviceName = device.name
+                case .failure: self.connected = false; self.deviceName = "Подсветка не подключена"
+                }
+            }
+        }
+    }
+
+    func select(_ preset: Preset) {
+        guard !isBusy else { return }
+        selectedName = preset.name
+        brightness = Double(preset.brightness)
+        setColor(preset.color, custom: false)
+    }
+
+    func setColor(_ rgb: RGB, custom: Bool = true) {
+        color = rgb; hexDraft = rgb.hex
+        let hsv = rgb.hsv
+        if hsv.saturation > 0 { hue = hsv.hue }
+        saturation = hsv.saturation; value = hsv.value
+        if custom { selectedName = "Свой цвет" }
+        schedulePreview()
+    }
+
+    func setHSV(h: Double? = nil, s: Double? = nil, v: Double? = nil) {
+        if let h { hue = min(1, max(0, h)) }
+        if let s { saturation = min(1, max(0, s)) }
+        if let v { value = min(1, max(0, v)) }
+        color = RGB.hsv(hue: hue, saturation: saturation, value: value)
+        hexDraft = color.hex; selectedName = "Свой цвет"
+        schedulePreview()
+    }
+
+    @discardableResult func commitHex() -> Bool {
+        guard let rgb = RGB(hex: hexDraft) else { error = "Введите шесть HEX-цифр, например #C98758."; return false }
+        if rgb != color { setColor(rgb) } else { hexDraft = rgb.hex }
+        return true
+    }
+
+    func setChannel(_ index: Int, _ number: Int) {
+        var channels = color.channels
+        channels[index] = UInt8(min(255, max(0, number)))
+        setColor(RGB(channels[0], channels[1], channels[2]))
+    }
+
+    func schedulePreview() {
+        previewTask?.cancel()
+        guard livePreview, recommendationFlow.phase == .idle else { queuedPreview = false; return }
+        previewTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 80_000_000)
+            guard !Task.isCancelled, let self else { return }
+            if self.isSending { self.queuedPreview = true }
+            else { self.sendColor(quit: false, preview: true) }
+        }
+    }
+
+    func apply(quit: Bool = false) {
+        beginSelectedLight(quit: quit)
+    }
+
+    private func sendColor(quit: Bool, preview: Bool) {
+        send(packet: LightProtocol.color(color, brightness: Int(brightness.rounded())), off: false, quit: quit, preview: preview)
+    }
+
+    func turnOff() {
+        guard !isBusy else { return }
+        livePreview = false; previewTask?.cancel(); queuedPreview = false
+        send(packet: LightProtocol.off, off: true, quit: false, preview: false)
+    }
+
+    private func send(packet: [UInt8], off: Bool, quit: Bool, preview: Bool) {
+        guard !previewOnly else { status = "Демо: USB-команда не отправлялась."; return }
+        let sentColor = color, sentBrightness = Int(brightness.rounded())
+        isSending = true
+        usbQueue.async {
+            let result = Result { try HIDTransport.send(packet) }
+            DispatchQueue.main.async {
+                self.isSending = false
+                switch result {
+                case .success:
+                    self.connected = true
+                    self.lastOutput = off ? .black : sentColor.scaled(percent: sentBrightness)
+                    self.savedState.color = sentColor
+                    self.savedState.brightness = sentBrightness
+                    self.savedState.lastApplied = Date()
+                    self.savedState.lastCommandWasOff = off
+                    self.persist()
+                    self.status = off ? "Команда выключения отправлена." : "Отправлено: \(sentColor.hex) · \(sentBrightness)%. Можно закрыть приложение."
+                    if quit && self.error == nil { NSApp.terminate(nil) }
+                case .failure(let failure):
+                    self.status = "Команда не отправлена."
+                    self.error = failure.localizedDescription
+                    self.livePreview = false
+                    self.queuedPreview = false
+                }
+                if self.terminationWaiting {
+                    self.terminationWaiting = false
+                    NSApp.reply(toApplicationShouldTerminate: true)
+                } else if self.queuedPreview && self.livePreview && !quit {
+                    self.queuedPreview = false
+                    self.sendColor(quit: false, preview: true)
+                }
+            }
+        }
+    }
+
+    func prepareToQuit() -> NSApplication.TerminateReply {
+        previewTask?.cancel(); queuedPreview = false
+        recommendationFlow.cancelRipple()
+        rippleStartedAt = nil
+        if isSending { terminationWaiting = true; return .terminateLater }
+        return .terminateNow
+    }
+
+    func beginSelectedLight(quit: Bool = false) {
+        guard !isBusy, commitHex(), recommendationFlow.begin() != nil else { return }
+        previewTask?.cancel(); queuedPreview = false
+        // Snapshot exactly the selected values. Recommendation must never replace this target.
+        let preset = Preset(id: "pending-selection", name: selectedName, subtitle: "",
+                            color: color, brightness: Int(brightness.rounded()))
+        pendingSelection = preset
+        quitAfterTransition = quit
+        previousAmbient = ambientColor
+        rippleColor = preset.color
+        status = "Цвет мягко заполняет окно…"
+        rippleStartedAt = Date()
+    }
+
+    /// Called by the rendered wave on its final frame, not by an unrelated delay timer.
+    func recommendationReachedEdges(token: UUID) {
+        guard recommendationFlow.reachedEdges(token: token), let preset = pendingSelection else { return }
+        ambientColor = preset.color
+        rippleStartedAt = nil
+        guard !previewOnly else {
+            recommendationFlow.finish(); pendingSelection = nil
+            status = "Демо: волна завершена, USB-команда не отправлялась."
+            return
+        }
+        isSending = true
+        status = "Мягко гасим прежний цвет…"
+        let start = lastOutput, end = preset.color.scaled(percent: preset.brightness)
+        usbQueue.async {
+            var lastWritten = start
+            var previousStage: LightTransition.Frame.Stage?
+            let result = Result { try HIDTransport.fade(from: start, to: end) { frame in
+                lastWritten = frame.color
+                if frame.stage != previousStage {
+                    previousStage = frame.stage
+                    DispatchQueue.main.async {
+                        switch frame.stage {
+                        case .dimming: self.status = "Мягко гасим прежний цвет…"
+                        case .dark: self.status = "Прежний цвет погас…"
+                        case .brightening: self.status = "Плавно включаем «\(preset.name)»…"
+                        }
+                    }
+                }
+            } }
+            let actualOutput = lastWritten
+            DispatchQueue.main.async {
+                self.lastOutput = actualOutput
+                self.isSending = false
+                self.recommendationFlow.finish()
+                self.pendingSelection = nil
+                switch result {
+                case .success:
+                    self.connected = true
+                    self.savedState.color = preset.color
+                    self.savedState.brightness = preset.brightness
+                    self.savedState.lastApplied = Date()
+                    self.savedState.lastCommandWasOff = false
+                    self.persist()
+                    self.status = "Плавно включён: \(preset.name) · \(preset.color.hex) · \(preset.brightness)%."
+                    if self.quitAfterTransition && self.error == nil && !self.terminationWaiting { NSApp.terminate(nil) }
+                case .failure(let failure):
+                    self.ambientColor = self.previousAmbient
+                    self.livePreview = false
+                    self.status = "Переход прерван. Проверьте подключение."
+                    self.error = failure.localizedDescription
+                }
+                if self.terminationWaiting {
+                    self.terminationWaiting = false
+                    NSApp.reply(toApplicationShouldTerminate: true)
+                }
+            }
+        }
+    }
+
+    func saveFavorite() {
+        guard commitHex() else { return }
+        let name = String(savedName.trimmingCharacters(in: .whitespacesAndNewlines).prefix(60))
+        guard !name.isEmpty else { return }
+        guard favorites.count < 100 else { error = "Можно сохранить до 100 своих пресетов."; return }
+        favorites.append(Preset(id: UUID().uuidString, name: name, subtitle: "Мой пресет", color: color,
+                                brightness: Int(brightness.rounded())))
+        savedName = ""; showSave = false
+        persist()
+    }
+
+    func removeFavorite(_ id: String) {
+        favorites.removeAll { $0.id == id }; persist()
+    }
+
+    private func persist() {
+        savedState.favorites = favorites
+        do { try store.save(savedState) }
+        catch { self.error = "Не удалось сохранить настройки: \(error.localizedDescription)" }
+    }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        AppModel.shared.prepareToQuit()
+    }
+}

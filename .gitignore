@@ -1,0 +1,23 @@
+# Build products and local caches
+.build/
+.swiftpm/
+dist/
+*.xcuserstate
+xcuserdata/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.p12
+*.p8
+*.mobileprovision
+*.provisionprofile
+*.key
+*.pem
+
+# User data, logs, and OS files
+state.json
+*.log
+.DS_Store
+._*

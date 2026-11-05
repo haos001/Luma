@@ -1,0 +1,31 @@
+name: Bug report
+description: Report a reproducible application problem
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: "For vulnerabilities, follow SECURITY.md. Do not include credentials, serial numbers, or personal settings."
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Luma version or commit, macOS version, and Apple Silicon/Intel
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: hardware
+    attributes:
+      label: Hardware and logs
+      description: USB IDs, LED count, other controller apps running, and a short redacted error if relevant

@@ -1,0 +1,30 @@
+name: Hardware compatibility
+description: Share evidence about a specific USB controller
+title: "[Hardware] "
+body:
+  - type: input
+    id: device
+    attributes:
+      label: Device model and firmware (if known)
+      description: Do not include serial numbers
+    validations:
+      required: true
+  - type: input
+    id: usb
+    attributes:
+      label: USB VID, PID, usage page, and LED count
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: macOS version, CPU architecture, and Luma version
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Observed behavior
+      description: Distinguish enumeration-only checks from commands actually sent to the device
+    validations:
+      required: true
